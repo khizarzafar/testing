@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Do refresh-priority signals beat a hand-written rule? — A Lane 2 content-scoring study</title>
+<meta name="description" content="A client-grouped, leakage-audited study of whether a Random Forest ranking model beats a transparent CTR-vs-position rule for prioritizing SEO content refreshes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1A2332;
+    --paper:#FAFAF7;
+    --forest:#2F5233;
+    --sand:#C9BFA8;
+    --rule:#E3DFD5;
+    --alert:#B33A3A;
+    --muted:#6B6F76;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif; font-size:17px; line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:0 24px;}
+  h1,h2,h3{font-family:'Source Serif 4',Georgia,serif; font-weight:600; color:var(--ink); line-height:1.15;}
+  a{color:var(--forest);}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--forest); margin:0 0 10px 0;
+  }
+  header.hero{
+    padding:88px 0 56px 0; border-bottom:1px solid var(--rule);
+  }
+  header.hero .kicker{
+    font-family:'IBM Plex Mono',monospace; font-size:13px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--muted); margin-bottom:18px;
+  }
+  header.hero h1{font-size:clamp(28px,4.4vw,42px); margin:0 0 22px 0; max-width:14ch;}
+  header.hero .sub{font-size:19px; color:var(--muted); max-width:56ch; margin:0 0 40px 0;}
+  .stat-row{display:flex; gap:28px; flex-wrap:wrap;}
+  .stat-chip{
+    border:1px solid var(--rule); border-radius:2px; padding:16px 20px; min-width:150px;
+    background:#fff;
+  }
+  .stat-chip .num{font-family:'Source Serif 4',serif; font-size:30px; font-weight:600; color:var(--forest);}
+  .stat-chip .lbl{font-size:13px; color:var(--muted); margin-top:2px;}
+  .stat-chip .was{font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--muted); text-decoration:line-through; margin-right:6px;}
+
+  section{padding:56px 0; border-bottom:1px solid var(--rule);}
+  section:last-of-type{border-bottom:none;}
+  section h2{font-size:24px; margin:0 0 18px 0;}
+  section p{margin:0 0 16px 0;}
+  section ul, section ol{padding-left:22px;}
+  section li{margin-bottom:8px;}
+
+  .abstract{
+    background:#fff; border:1px solid var(--rule); border-left:3px solid var(--forest);
+    padding:24px 26px; font-size:16.5px;
+  }
+  .abstract p{margin:0;}
+
+  figure{margin:24px 0;}
+  figure img{width:100%; height:auto; display:block; border:1px solid var(--rule); border-radius:2px;}
+  figcaption{
+    font-size:14px; color:var(--muted); margin-top:10px; font-family:'IBM Plex Mono',monospace;
+  }
+
+  table{width:100%; border-collapse:collapse; margin:18px 0; font-size:15px;}
+  th,td{
+    text-align:left; padding:9px 10px; border-bottom:1px solid var(--rule);
+    font-family:'IBM Plex Mono',monospace; font-size:14px;
+  }
+  th{color:var(--muted); font-weight:500; font-size:12.5px; text-transform:uppercase; letter-spacing:.04em;}
+  tr:last-child td{border-bottom:1px solid var(--ink);}
+
+  .callout{
+    background:#fff; border:1px solid var(--rule); border-left:3px solid var(--alert);
+    padding:18px 22px; margin:20px 0; font-size:15.5px;
+  }
+  .callout .callout-label{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--alert); margin-bottom:8px; font-weight:500;
+  }
+
+  .before-after{
+    display:inline-flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace;
+    font-size:15px; background:#fff; border:1px solid var(--rule); padding:8px 14px; border-radius:2px;
+    margin:6px 0;
+  }
+  .before-after .before{color:var(--alert); text-decoration:line-through;}
+  .before-after .after{color:var(--forest); font-weight:600;}
+  .before-after .arrow{color:var(--muted);}
+
+  .action-row{
+    display:flex; justify-content:space-between; gap:14px; padding:12px 0;
+    border-bottom:1px solid var(--rule); font-size:15px; flex-wrap:wrap;
+  }
+  .action-row:last-child{border-bottom:none;}
+  .action-row .tag{
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; background:var(--sand);
+    color:var(--ink); padding:2px 8px; border-radius:2px; white-space:nowrap; align-self:flex-start;
+  }
+
+  .repro-links a{display:block; margin-bottom:8px; font-family:'IBM Plex Mono',monospace; font-size:14.5px;}
+
+  footer{padding:48px 0 80px 0; color:var(--muted); font-size:14.5px;}
+  footer .credit{
+    border-top:1px solid var(--rule); padding-top:24px; margin-top:8px;
+  }
+
+  @media (max-width:600px){
+    header.hero{padding:56px 0 40px 0;}
+    section{padding:40px 0;}
+    .stat-row{gap:14px;}
+    .stat-chip{min-width:130px; padding:12px 14px;}
+    .stat-chip .num{font-size:24px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">Lane 2 — Refresh / Content Opportunity Scoring · ML Internship Capstone</div>
+    <h1>Do refresh-priority signals beat a hand-written rule?</h1>
+    <p class="sub">A client-grouped, leakage-audited comparison of a transparent CTR-vs-position rule
+    against a Random Forest ranking model, built on a real content-performance dataset.</p>
+    <div class="stat-row">
+      <div class="stat-chip">
+        <div class="num">0.70</div>
+        <div class="lbl">Random Forest precision@50<br><span class="was">0.46 baseline</span></div>
+      </div>
+      <div class="stat-chip">
+        <div class="num">32</div>
+        <div class="lbl">clients · 30,000 content items scored</div>
+      </div>
+      <div class="stat-chip">
+        <div class="num">6</div>
+        <div class="lbl">held-out clients back this result</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="abstract">
+  <div class="wrap">
+    <div class="eyebrow">Abstract</div>
+    <div class="abstract">
+      <p>
+      Which content pages should an editor review first for refresh, expansion, or protection,
+      out of thousands? Using a 30,000-item slice of FlyRank's content-performance dataset
+      across 32 clients, I built a transparent rule (CTR relative to search position) as a
+      baseline, then compared it against Logistic Regression and Random Forest models under a
+      client-grouped holdout split. Random Forest ranked the top of the review queue more
+      precisely than the rule (precision@50 of 0.70 vs. 0.46), while Logistic Regression
+      actually underperformed the rule at that same cut — a result worth reporting honestly
+      rather than hiding. A deliberate leakage test (adding the label-derived column back as a
+      feature) pushed the model's AUC to a perfect 1.000, confirming the honest 0.741 AUC number
+      is real and not a leak. The result is a ranked, human-reviewed action playbook with named
+      limits, not an automated decision system.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="intro">
+  <div class="wrap">
+    <div class="eyebrow">01 — Introduction</div>
+    <h2>The decision this supports</h2>
+    <p>
+    FlyRank's clients publish far more content than any editor can manually re-review each week.
+    The useful output isn't a report on the whole inventory — it's a short, defensible, ranked
+    list of the pages worth an editor's next hour. That's the real decision this project
+    supports: <em>not</em> "will this page decline," but "where should limited review attention
+    go first, and why."
+    </p>
+    <p>
+    A single-column rule turns out to be nearly useless for this: flagging every page with a
+    downward impression trend catches <strong>54.2%</strong> of the entire 30,000-item inventory
+    — not a queue, effectively the whole catalog. The tension this paper resolves is whether a
+    model that combines several individually weak signals can produce a genuinely useful,
+    smaller, more precise queue — and whether that improvement survives an honest test rather
+    than an inflated one.
+    </p>
+  </div>
+</section>
+
+<section id="data">
+  <div class="wrap">
+    <div class="eyebrow">02 — Data</div>
+    <h2>Source, scope, and exclusions</h2>
+    <p>
+    This study uses the FlyRank ML Internship starter release: a 30,000-row anonymized slice of
+    the internship data warehouse, covering 32 client accounts. Content identifiers and client
+    identifiers are pseudonymous hashes throughout — no client names, brand names, or raw search
+    queries appear anywhere in this paper or its underlying notebooks.
+    </p>
+    <p><strong>Deliberately excluded:</strong></p>
+    <ul>
+      <li><span class="mono">trend_direction</span> / <span class="mono">trend_pct</span> as
+      model features — these are exactly what the outcome label is derived from, so including
+      them would be predicting the label from itself (demonstrated directly in the leakage audit
+      below).</li>
+      <li>The warehouse's 90-day query table, for the data-contract exercise on a mid-panel
+      month — its fixed 90-day window doesn't align with a single calendar month, and joining it
+      without solving that alignment risked silently pulling in information from outside the
+      window being scored.</li>
+      <li>Any row where GA4 engagement data was not yet available for that client
+      (zero-filled placeholder rows, not genuine zero engagement).</li>
+    </ul>
+  </div>
+</section>
+
+<section id="methodology">
+  <div class="wrap">
+    <div class="eyebrow">03 — Methodology</div>
+    <h2>Label, baseline, model, and validation design</h2>
+    <p>
+    <strong>Label (a proxy, not ground truth):</strong> <span class="mono">is_declining_label</span>
+    is defined as 1 when a page's 30-day impression trend is down more than 20% relative to the
+    prior 30 days. It reflects recent momentum, not a confirmed editorial judgment that a page
+    needs work — a page can be flagged as "declining" and still be perfectly healthy for reasons
+    the label can't see (seasonality, a recent unrecorded update, a SERP feature suppressing
+    clicks).
+    </p>
+    <p>
+    <strong>Baseline:</strong> a transparent rule scoring pages by visibility, position quality,
+    and CTR gap — built after checking two candidate signals against real bucket tables first.
+    Staleness (days since last update) came back <strong>MIXED</strong> — decline rate rose
+    across most buckets but reversed in the stalest, smallest one — so the rule leans instead on
+    the <strong>CONFIRMED</strong> signal: CTR relative to position, which fell cleanly from
+    64.7% decline rate at &lt;0.5% CTR to 44.7% at 1.5-3% CTR across a well-populated cohort.
+    </p>
+    <p>
+    <strong>Model:</strong> Logistic Regression and Random Forest, trained on 13 pre-decision
+    features (search volume, competition, word count, content age, staleness, CTR, position,
+    engagement rate, scroll rate, AI traffic share, impressions, sessions, clicks — 90-day
+    windows). Gradient Boosting was considered and deliberately skipped: with 32 clients and
+    30,000 rows, a depth-limited Random Forest already sits close to the complexity this amount
+    of data can safely support without extra tuning risk.
+    </p>
+    <p>
+    <strong>Validation design:</strong> a client-grouped holdout (6 of 32 clients held out
+    entirely), not a random row split. Content items from the same client share domain
+    authority, editorial style, and seasonality — a random split would let the model partially
+    learn "this looks like client X" rather than a genuinely transferable pattern.
+    </p>
+  </div>
+</section>
+
+<section id="results">
+  <div class="wrap">
+    <div class="eyebrow">04 — Results</div>
+    <h2>Model vs. baseline, same split</h2>
+    <table>
+      <tr><th>Method</th><th>precision@50</th><th>precision@20%</th></tr>
+      <tr><td>Baseline (rule)</td><td>0.460</td><td>0.555</td></tr>
+      <tr><td>Logistic Regression</td><td>0.220</td><td>0.559</td></tr>
+      <tr><td>Random Forest</td><td>0.700</td><td>0.609</td></tr>
+    </table>
+    <p class="mono" style="font-size:14px;color:var(--muted);">test base rate = 0.391 · n(test) = 2,325 rows across 6 held-out clients</p>
+
+    <figure>
+      <img src="assets/model_vs_baseline.png" alt="Bar chart comparing precision at 50 and precision at 20 percent for the baseline rule, logistic regression, and random forest.">
+      <figcaption>Random Forest wins on both cuts; Logistic Regression loses to the hand-written rule at precision@50 despite roughly tying it at precision@20%.</figcaption>
+    </figure>
+
+    <p>
+    Random Forest ranked the top of the queue more precisely than the rule on both cuts. The
+    more interesting result is Logistic Regression's: it <strong>underperforms the baseline</strong>
+    at precision@50, a result reported here rather than hidden, because a model losing to a
+    simple rule at one cut and tying it at another is itself informative — a purely linear model
+    struggles to isolate the very top of this queue the way either the rule or a tree ensemble
+    can.
+    </p>
+
+    <h3>The honest split matters</h3>
+    <p>
+    Re-running the same Random Forest on a naive random row split (rather than the client-grouped
+    one) produced precision@50 of <strong>0.900</strong> — a full 0.20 higher than the honest
+    number. That gap is itself a finding: it's roughly how much of the "random split" score was
+    the model partially memorizing which client a row came from, rather than genuine transferable
+    signal.
+    </p>
+    <div class="before-after">
+      <span class="before">0.900 (random split)</span>
+      <span class="arrow">&rarr;</span>
+      <span class="after">0.700 (client-grouped split)</span>
+    </div>
+
+    <h3>Leakage audit</h3>
+    <p>
+    Deliberately adding <span class="mono">trend_pct</span> back into the feature set — the
+    exact column the label is derived from — pushed AUC from an honest 0.741 to a perfect 1.000,
+    the textbook signature of leakage. The column was then removed, keeping only the honest
+    result.
+    </p>
+    <figure>
+      <img src="assets/leakage_jump.png" alt="Bar chart showing AUC jumping from 0.741 to 1.000 when a label-derived feature is added.">
+      <figcaption>A jump to a perfect score is the confession, not the win — the leaked column was removed immediately after this test.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="limitations">
+  <div class="wrap">
+    <div class="eyebrow">05 — Limitations</div>
+    <h2>What this work cannot claim</h2>
+    <div class="callout">
+      <div class="callout-label">Proxy, not ground truth</div>
+      The outcome label reflects a 30-day impression trend, not a confirmed editorial judgment.
+      A page can be flagged and still be healthy for reasons outside the label's view.
+    </div>
+    <div class="callout">
+      <div class="callout-label">Small holdout</div>
+      The 0.70/0.61 precision numbers come from a single 6-client holdout. A different client
+      split could shift these numbers meaningfully; that variance hasn't been measured here.
+      This result is directional, not conclusive.
+    </div>
+    <div class="callout">
+      <div class="callout-label">Contradicts the source paper's own decay finding</div>
+      This dataset's decline rate <em>falls</em> with content age (67% at 0-90 days, 43% at
+      365+ days) — opposite the direction reported in FlyRank's published research paper. The
+      most likely explanation is that young pages here have small impression bases, so small
+      absolute drops read as large relative "declines" — but that is a hypothesis, not a
+      confirmed cause, and the conflict is stated rather than smoothed over.
+    </div>
+    <p>
+    No causal claims are made anywhere in this paper. Every result here is observational,
+    measured, or decision-support language — never "causes," "will improve," or "the algorithm
+    rewards."
+    </p>
+  </div>
+</section>
+
+<section id="recommendations">
+  <div class="wrap">
+    <div class="eyebrow">06 — Ranked recommendations</div>
+    <h2>The action playbook</h2>
+    <p>Four content archetypes, each mapped to a different action rather than one blanket rule:</p>
+
+    <div class="action-row">
+      <div><strong>High-Visibility Decliners</strong> (n=12,205) — high impressions, decent
+      position, longest content, highest decline rate (63%).</div>
+      <div class="tag">refresh_priority</div>
+    </div>
+    <div class="action-row">
+      <div><strong>Visible but Thin</strong> (n=9,442) — moderate traffic, weak position,
+      thinnest content in the set.</div>
+      <div class="tag">expand_and_refresh</div>
+    </div>
+    <div class="action-row">
+      <div><strong>Fresh but Low-Reach</strong> (n=8,194) — good position, freshest content,
+      almost no traffic — a distribution problem, not a content-quality one.</div>
+      <div class="tag">monitor_promote</div>
+    </div>
+    <div class="action-row">
+      <div><strong>Low-Volume Outliers</strong> (n=159) — near-zero impressions with a
+      statistically noisy CTR.</div>
+      <div class="tag">exclude_low_confidence</div>
+    </div>
+
+    <h3>Human review, before acting on anything</h3>
+    <ul>
+      <li>Check for a SERP feature (featured snippet, AI Overview, ads) suppressing clicks
+      regardless of content quality — the model can't see the results page.</li>
+      <li>Check whether the page was already updated recently, in a way not yet reflected in
+      trend signals.</li>
+      <li>Check for seasonality — a single 90-day window can't separate a seasonal dip from a
+      genuine decline.</li>
+    </ul>
+
+    <h3>What should never be automated</h3>
+    <ul>
+      <li>No auto-publishing or auto-editing content from this score — every action is a
+      suggestion for a human, never an executed change.</li>
+      <li>No use of this score as a performance measure for a person, client, or page in
+      isolation.</li>
+      <li>No applying this playbook to a different lane or client mix without re-validating —
+      these numbers are specific to this data and this split.</li>
+    </ul>
+
+    <h3>Monitoring &amp; retrain triggers</h3>
+    <p>
+    At precision@50 = 0.70, an editor reviewing the top 50 each week spends effort on roughly 15
+    wasted reviews to reach 35 real ones. If precision@50 drifts down toward the dataset's
+    ~0.54 base rate, the model is adding little over random ranking — that threshold, not an
+    arbitrary one, is the retrain trigger. Retrain quarterly regardless, or immediately if the
+    data contract changes.
+    </p>
+  </div>
+</section>
+
+<section id="reproducibility">
+  <div class="wrap">
+    <div class="eyebrow">07 — Reproducibility</div>
+    <h2>Rerun this from a fresh clone</h2>
+    <p>Every number on this page traces back to an executed notebook in the linked repository.</p>
+    <div class="repro-links">
+      <a href="https://github.com/khizarzafar/testing/blob/main/work/notebooks/w01_research_question.ipynb">w01_research_question.ipynb — lane selection, why scoring beats a rule</a>
+      <a href="https://github.com/khizarzafar/testing/blob/main/work/notebooks/w02_ml_task_framing.ipynb">w02_ml_task_framing.ipynb — task type, label, metric, feature correlations</a>
+      <a href="https://github.com/khizarzafar/testing/blob/main/work/notebooks/w03_data_contract.ipynb">w03_data_contract.ipynb — warehouse data contract, grain and availability checks</a>
+      <a href="https://github.com/khizarzafar/testing/blob/main/work/notebooks/w04_baseline_score.ipynb">w04_baseline_score.ipynb — the transparent baseline rule</a>
+      <a href="https://github.com/khizarzafar/testing/blob/main/work/notebooks/w05_model.ipynb">w05_model.ipynb — LogReg + Random Forest vs. baseline</a>
+      <a href="https://github.com/khizarzafar/testing/blob/main/work/notebooks/w06_validation_audit.ipynb">w06_validation_audit.ipynb — split gap, leakage proof, claim rewrite</a>
+      <a href="https://github.com/khizarzafar/testing/blob/main/work/notebooks/w07_action_playbook.ipynb">w07_action_playbook.ipynb — archetypes, decay insight, action playbook</a>
+      <a href="https://github.com/khizarzafar/testing">Full repository</a>
+    </div>
+    <p style="margin-top:18px;">
+    Random seed <span class="mono">42</span> throughout. To reproduce: clone the repo, install
+    the pinned requirements, and run each notebook top to bottom in order — each writes its own
+    outputs to <span class="mono">work/outputs/</span> and figures to
+    <span class="mono">work/figures/</span>.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="credit">
+      Built on the FlyRank ML Internship dataset —
+      <a href="https://flyrank.ai" target="_blank" rel="noopener">flyrank.ai</a>.
+      This is independent capstone research produced during the FlyRank ML Internship and does
+      not represent an official FlyRank product or claim.
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
