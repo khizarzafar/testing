@@ -1,0 +1,79 @@
+{
+  "validated_precision_at_50": 0.7,
+  "validated_precision_at_50_source": "w06_validation_audit.ipynb, client-grouped holdout, 6 test clients",
+  "base_rate": 0.542,
+  "archetype_profile": [
+    {
+      "archetype_id": 0,
+      "n": 9442,
+      "avg_impressions": 4935.23,
+      "avg_position": 22.07,
+      "avg_ctr": 0.2,
+      "decline_rate": 0.52
+    },
+    {
+      "archetype_id": 1,
+      "n": 12205,
+      "avg_impressions": 8921.59,
+      "avg_position": 16.55,
+      "avg_ctr": 0.28,
+      "decline_rate": 0.63
+    },
+    {
+      "archetype_id": 2,
+      "n": 159,
+      "avg_impressions": 4.57,
+      "avg_position": 6.46,
+      "avg_ctr": 38.06,
+      "decline_rate": 0.16
+    },
+    {
+      "archetype_id": 3,
+      "n": 8194,
+      "avg_impressions": 63.92,
+      "avg_position": 9.63,
+      "avg_ctr": 0.48,
+      "decline_rate": 0.44
+    }
+  ],
+  "archetype_names": {
+    "0": "Visible but Thin",
+    "1": "High-Visibility Decliners",
+    "2": "Low-Volume Outliers",
+    "3": "Fresh but Low-Reach"
+  },
+  "archetype_actions": {
+    "0": "expand_and_refresh",
+    "1": "refresh_priority",
+    "2": "exclude_low_confidence",
+    "3": "monitor_promote"
+  },
+  "decay_by_age": [
+    {
+      "age_bucket": "0-90d",
+      "n": 492,
+      "decline_rate": 0.669
+    },
+    {
+      "age_bucket": "91-180d",
+      "n": 11780,
+      "decline_rate": 0.626
+    },
+    {
+      "age_bucket": "181-270d",
+      "n": 4255,
+      "decline_rate": 0.59
+    },
+    {
+      "age_bucket": "271-365d",
+      "n": 7113,
+      "decline_rate": 0.47
+    },
+    {
+      "age_bucket": "365d+",
+      "n": 6360,
+      "decline_rate": 0.426
+    }
+  ],
+  "random_state": 42
+}
