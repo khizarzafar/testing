@@ -151,8 +151,9 @@
     <div class="eyebrow">Abstract</div>
     <div class="abstract">
       <p>
-      Which content pages should an editor review first for refresh, expansion, or protection,
-      out of thousands? Using a 30,000-item slice of FlyRank's content-performance dataset
+      FlyRank manages SEO content across dozens of client accounts at once — far more pages than
+      any editor can manually re-review in a week. Which content pages should get reviewed
+      first, out of thousands? Using a 30,000-item slice of FlyRank's content-performance dataset
       across 32 clients, I built a transparent rule (CTR relative to search position) as a
       baseline, then compared it against Logistic Regression and Random Forest models under a
       client-grouped holdout split. Random Forest ranked the top of the review queue more
@@ -185,6 +186,13 @@
     model that combines several individually weak signals can produce a genuinely useful,
     smaller, more precise queue — and whether that improvement survives an honest test rather
     than an inflated one.
+    </p>
+    <p>
+    This is the case study, not a separate one: FlyRank's actual operational bottleneck is
+    editor attention spread across many client accounts, and every result in this paper — the
+    baseline, the model comparison, the archetypes, the playbook — is built directly against
+    that bottleneck, on FlyRank's own content-performance data, not a toy or public dataset
+    chosen for convenience.
     </p>
   </div>
 </section>
